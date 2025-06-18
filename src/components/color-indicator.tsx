@@ -10,7 +10,7 @@ export default function ColorIndicator() {
             style={{ background: hexColor(color as number) }}
           />
           
-          <span className="text-sm text-white">
+          <span className="text-sm text-white font-sans">
             {txColorLabels[type as keyof typeof txColors]}
           </span>
         </div>

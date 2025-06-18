@@ -2,6 +2,7 @@
 
 import ColorIndicator from '@/components/color-indicator';
 import ShootingStar from '@/components/shooting-star';
+import useOrientation from '@/hook/useOrientation';
 import { txColors } from '@/lib/tx-colors';
 import { Transaction } from '@/types';
 import { Canvas } from '@react-three/fiber';
@@ -16,12 +17,14 @@ interface ShootingStar {
   y: number;
 }
 
-const TRANSACTION_INTERVAL = 100;
+const transactionInterval = 100;
 
 export default function HomePage() {
   const txQueue = useRef<Transaction[]>([]);
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
+  const { isLandscape } = useOrientation();
 
+  // Listen for new transactions from the server
   useEffect(() => {
     const eventSource = new EventSource('/api/transactions');
 
@@ -39,28 +42,34 @@ export default function HomePage() {
     };
   }, []);
 
+  // Process transactions and create shooting stars
   useEffect(() => {
     const intervalId = setInterval(() => {
-      if (txQueue.current.length > 0) {
-        const next = txQueue.current.shift();
-        if (!next) return;
+      if (txQueue.current.length === 0) return;
 
-        const shootingStarProps: ShootingStar = { 
-          id: next.hash, 
-          size: 75,
-          color: txColors[next.type],
-          x: -4, 
-          y: (Math.random() - 0.5) * 3
-        }
+      // Get the next transaction from the queue
+      const nextTx = txQueue.current.shift();
+      if (!nextTx) return;
 
-        setShootingStars((prev) => [...prev, shootingStarProps]);
-      }
-    }, TRANSACTION_INTERVAL);
+      // Create a shooting star for the transaction
+      setShootingStars((prev) => [...prev, { 
+        id: nextTx.hash, 
+        size: 75,
+        color: txColors[nextTx.type],
+        x: -4, 
+        y: (Math.random() - 0.5) * 3
+      }]);
+    }, transactionInterval);
 
     return () => clearInterval(intervalId);
   }, []);
 
-  return (
+  // Clear shooting stars when orientation changes
+  useEffect(() => {
+    setShootingStars([]);
+  }, [isLandscape])
+
+  return isLandscape ? (
     <>
       <Canvas className='!h-screen bg-black'>
         {shootingStars.map((star) => (
@@ -76,5 +85,11 @@ export default function HomePage() {
 
       <ColorIndicator />
     </>
+  ) : (
+    <div 
+      className="h-screen flex items-center justify-center text-white bg-black font-sans"
+    >
+      <p>Please rotate your device.</p>
+    </div>
   );
 }
